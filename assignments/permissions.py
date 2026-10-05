@@ -16,3 +16,12 @@ class AssignmentPermission(BasePermission):
         if request.method in SAFE_METHODS:
             return True
         return request.user.role == User.Role.TEACHER and obj.course.teacher_id == request.user.pk
+
+
+class SubmissionPermission(BasePermission):
+    message = "Изменять решение может только студент, который его отправил."
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.role == User.Role.STUDENT and obj.student_id == request.user.pk

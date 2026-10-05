@@ -1,7 +1,9 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator, URLValidator
 from django.db import models
 
 from courses.models import Course
+from users.models import User
 
 
 class Assignment(models.Model):
@@ -48,3 +50,44 @@ class Assignment(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Submission(models.Model):
+    assignment = models.ForeignKey(
+        Assignment,
+        on_delete=models.CASCADE,
+        related_name="submissions",
+        verbose_name="задание",
+    )
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="submissions",
+        limit_choices_to={"role": User.Role.STUDENT},
+        verbose_name="студент",
+    )
+    answer = models.TextField("текст решения", max_length=20000, blank=True)
+    solution_url = models.URLField(
+        "ссылка на решение",
+        max_length=500,
+        blank=True,
+        validators=(URLValidator(schemes=("http", "https")),),
+    )
+    submitted_at = models.DateTimeField("отправлено", auto_now_add=True)
+    updated_at = models.DateTimeField("обновлено", auto_now=True)
+
+    class Meta:
+        ordering = ("-submitted_at", "-id")
+        verbose_name = "решение"
+        verbose_name_plural = "решения"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("assignment", "student"), name="unique_assignment_student"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(answer="", solution_url=""), name="submission_has_content"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.student} — {self.assignment}"
