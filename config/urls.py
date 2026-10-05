@@ -9,6 +9,7 @@ urlpatterns = [
     path("", RedirectView.as_view(pattern_name="swagger-ui", permanent=False)),
     path("admin/", admin.site.urls),
     path("api/", include("users.urls")),
+    path("api/", include("courses.urls")),
     path("api/health/", HealthCheckView.as_view(), name="health-check"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
