@@ -9,12 +9,14 @@ from drf_spectacular.utils import (
     extend_schema_view,
 )
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from assignments.models import Assignment, Submission
+from assignments.models import Assignment, Grade, Submission
 from assignments.permissions import SubmissionPermission
-from assignments.serializers import SubmissionSerializer
+from assignments.serializers import GradeInputSerializer, SubmissionSerializer
 from users.models import User
 
 
@@ -22,6 +24,12 @@ class AlreadySubmitted(APIException):
     status_code = status.HTTP_409_CONFLICT
     default_detail = "Решение уже отправлено. Измените существующую работу."
     default_code = "already_submitted"
+
+
+class SubmissionAlreadyGraded(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "Проверенное решение нельзя изменить."
+    default_code = "submission_already_graded"
 
 
 @extend_schema(
@@ -41,8 +49,20 @@ class AlreadySubmitted(APIException):
             409: OpenApiResponse(description="У студента уже есть решение этого задания."),
         },
     ),
-    update=extend_schema(summary="Редактирование своего решения до дедлайна"),
-    partial_update=extend_schema(summary="Частичное редактирование своего решения до дедлайна"),
+    update=extend_schema(
+        summary="Редактирование своего решения до проверки и дедлайна",
+        responses={
+            200: SubmissionSerializer,
+            409: OpenApiResponse(description="Решение уже проверено."),
+        },
+    ),
+    partial_update=extend_schema(
+        summary="Частичное редактирование своего решения до проверки и дедлайна",
+        responses={
+            200: SubmissionSerializer,
+            409: OpenApiResponse(description="Решение уже проверено."),
+        },
+    ),
 )
 class SubmissionViewSet(
     mixins.CreateModelMixin,
@@ -57,7 +77,9 @@ class SubmissionViewSet(
 
     def get_assignment(self):
         if not hasattr(self, "_assignment"):
-            assignments = Assignment.objects.filter(course_id=self.kwargs["course_pk"])
+            assignments = Assignment.objects.filter(
+                course_id=self.kwargs["course_pk"]
+            ).select_related("course")
             user = self.request.user
             if user.role == User.Role.TEACHER:
                 assignments = assignments.filter(course__teacher=user)
@@ -65,7 +87,7 @@ class SubmissionViewSet(
                 assignments = assignments.filter(
                     course__enrollments__student=user, status=Assignment.Status.PUBLISHED
                 )
-            if self.action in ("create", "update", "partial_update"):
+            if self.action in ("create", "update", "partial_update", "grade"):
                 assignments = assignments.select_for_update(of=("self",))
             self._assignment = get_object_or_404(assignments, pk=self.kwargs["assignment_pk"])
         return self._assignment
@@ -74,11 +96,11 @@ class SubmissionViewSet(
         if getattr(self, "swagger_fake_view", False):
             return Submission.objects.none()
         queryset = Submission.objects.filter(assignment=self.get_assignment()).select_related(
-            "student"
+            "student", "grade__graded_by"
         )
         if self.request.user.role != User.Role.TEACHER:
             queryset = queryset.filter(student=self.request.user)
-        if self.action in ("update", "partial_update"):
+        if self.action in ("update", "partial_update", "grade"):
             queryset = queryset.select_for_update(of=("self",))
         return queryset
 
@@ -106,5 +128,27 @@ class SubmissionViewSet(
         return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
+        if serializer.instance.status == Submission.Status.GRADED:
+            raise SubmissionAlreadyGraded
         self.check_deadline()
         serializer.save()
+
+    @extend_schema(
+        summary="Выставление или исправление оценки преподавателем",
+        request=GradeInputSerializer,
+        responses=SubmissionSerializer,
+    )
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def grade(self, request, course_pk=None, assignment_pk=None, pk=None):
+        submission = self.get_object()
+        serializer = GradeInputSerializer(
+            data=request.data, context={"assignment": self.get_assignment()}
+        )
+        serializer.is_valid(raise_exception=True)
+        grade, _ = Grade.objects.update_or_create(
+            submission=submission,
+            defaults={**serializer.validated_data, "graded_by": request.user},
+        )
+        submission.grade = grade
+        return Response(self.get_serializer(submission).data)

@@ -19,9 +19,14 @@ class AssignmentPermission(BasePermission):
 
 
 class SubmissionPermission(BasePermission):
-    message = "Изменять решение может только студент, который его отправил."
+    message = "У вас нет прав для этого действия с решением."
 
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
+        if view.action == "grade":
+            return (
+                request.user.role == User.Role.TEACHER
+                and view.get_assignment().course.teacher_id == request.user.pk
+            )
         return request.user.role == User.Role.STUDENT and obj.student_id == request.user.pk

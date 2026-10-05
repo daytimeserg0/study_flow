@@ -53,6 +53,10 @@ class Assignment(models.Model):
 
 
 class Submission(models.Model):
+    class Status(models.TextChoices):
+        SUBMITTED = "submitted", "Ожидает проверки"
+        GRADED = "graded", "Проверено"
+
     assignment = models.ForeignKey(
         Assignment,
         on_delete=models.CASCADE,
@@ -91,3 +95,39 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"{self.student} — {self.assignment}"
+
+    @property
+    def status(self):
+        return self.Status.GRADED if hasattr(self, "grade") else self.Status.SUBMITTED
+
+
+class Grade(models.Model):
+    submission = models.OneToOneField(
+        Submission,
+        on_delete=models.CASCADE,
+        related_name="grade",
+        verbose_name="решение",
+    )
+    score = models.PositiveSmallIntegerField("балл", validators=(MaxValueValidator(1000),))
+    feedback = models.TextField("обратная связь", max_length=5000, blank=True)
+    graded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="given_grades",
+        limit_choices_to={"role": User.Role.TEACHER},
+        verbose_name="проверил",
+    )
+    graded_at = models.DateTimeField("проверено", auto_now=True)
+
+    class Meta:
+        ordering = ("-graded_at", "-id")
+        verbose_name = "оценка"
+        verbose_name_plural = "оценки"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(score__gte=0, score__lte=1000), name="grade_valid_score"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.submission} — {self.score}"

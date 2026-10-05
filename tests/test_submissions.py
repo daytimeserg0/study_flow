@@ -122,6 +122,8 @@ def test_student_submits_answer_or_link_and_owns_result(
         "student",
         "answer",
         "solution_url",
+        "status",
+        "grade",
         "submitted_at",
         "updated_at",
     }
@@ -135,6 +137,8 @@ def test_student_submits_answer_or_link_and_owns_result(
     }
     assert data["answer"] == saved.answer
     assert data["solution_url"] == saved.solution_url
+    assert data["status"] == "submitted"
+    assert data["grade"] is None
     assert data["submitted_at"]
     assert data["updated_at"]
 
