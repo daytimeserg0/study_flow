@@ -181,9 +181,10 @@ def test_teacher_list_includes_own_drafts_and_published_assignments_only(
     response = api_client.get(assignment_url(course))
 
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
-    assert {item["id"] for item in response.json()} == {draft.pk, published.pk}
-    assert {item["status"] for item in response.json()} == {"draft", "published"}
+    assert isinstance(response.json()["results"], list)
+    assert response.json()["count"] == 2
+    assert {item["id"] for item in response.json()["results"]} == {draft.pk, published.pk}
+    assert {item["status"] for item in response.json()["results"]} == {"draft", "published"}
 
 
 def test_student_list_hides_drafts_and_assignments_from_other_courses(
@@ -201,7 +202,7 @@ def test_student_list_hides_drafts_and_assignments_from_other_courses(
     response = api_client.get(assignment_url(course))
 
     assert response.status_code == 200
-    assert [item["id"] for item in response.json()] == [published.pk]
+    assert [item["id"] for item in response.json()["results"]] == [published.pk]
     assert draft.title.encode() not in response.content
     assert draft.description.encode() not in response.content
 
@@ -426,7 +427,12 @@ def test_publishing_records_time_and_makes_assignment_visible_to_student(
     api_client, teacher, student, course, draft
 ):
     api_client.force_authenticate(student)
-    assert api_client.get(assignment_url(course)).json() == []
+    assert api_client.get(assignment_url(course)).json() == {
+        "count": 0,
+        "next": None,
+        "previous": None,
+        "results": [],
+    }
     api_client.force_authenticate(teacher)
     before = timezone.now()
 
@@ -440,7 +446,9 @@ def test_publishing_records_time_and_makes_assignment_visible_to_student(
     assert response.json()["published_at"]
     api_client.force_authenticate(student)
     assert api_client.get(assignment_url(course, draft)).status_code == 200
-    assert [item["id"] for item in api_client.get(assignment_url(course)).json()] == [draft.pk]
+    assert [item["id"] for item in api_client.get(assignment_url(course)).json()["results"]] == [
+        draft.pk
+    ]
 
 
 @pytest.mark.parametrize("expired_deadline", [False, True])

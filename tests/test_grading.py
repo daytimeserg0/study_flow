@@ -434,8 +434,8 @@ def test_ungraded_submission_has_submitted_status_and_remains_editable(
     assert detail.json()["grade"] is None
     listing = api_client.get(submission_url(course, assignment))
     assert listing.status_code == 200
-    assert listing.json()[0]["status"] == "submitted"
-    assert listing.json()[0]["grade"] is None
+    assert listing.json()["results"][0]["status"] == "submitted"
+    assert listing.json()["results"][0]["grade"] is None
 
     response = api_client.patch(url, {"answer": "Исправленное решение"}, format="json")
 
@@ -459,8 +459,8 @@ def test_student_reads_only_own_grade_while_teacher_reads_all_course_grades(
     api_client.force_authenticate(student)
     response = api_client.get(submission_url(course, assignment))
     assert response.status_code == 200
-    assert [item["id"] for item in response.json()] == [submission.pk]
-    assert response.json()[0]["grade"]["score"] == grade.score
+    assert [item["id"] for item in response.json()["results"]] == [submission.pk]
+    assert response.json()["results"][0]["grade"]["score"] == grade.score
     own_detail = api_client.get(submission_url(course, assignment, submission))
     assert own_detail.status_code == 200
     assert own_detail.json()["grade"]["feedback"] == grade.feedback
@@ -471,8 +471,11 @@ def test_student_reads_only_own_grade_while_teacher_reads_all_course_grades(
     api_client.force_authenticate(teacher)
     teacher_list = api_client.get(submission_url(course, assignment))
     assert teacher_list.status_code == 200
-    assert {item["grade"]["id"] for item in teacher_list.json()} == {grade.pk, peer_grade.pk}
-    assert all(item["status"] == "graded" for item in teacher_list.json())
+    assert {item["grade"]["id"] for item in teacher_list.json()["results"]} == {
+        grade.pk,
+        peer_grade.pk,
+    }
+    assert all(item["status"] == "graded" for item in teacher_list.json()["results"])
 
 
 @pytest.mark.parametrize("removed_access", ["enrollment", "publication"])

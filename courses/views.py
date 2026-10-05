@@ -2,12 +2,16 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
+from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from config.filters import CollectionFilteringMixin, StableOrderingFilter
 from courses.models import Course, Enrollment
 from courses.permissions import CoursePermission
+from courses.progress import get_course_progress
 from courses.serializers import (
+    CourseProgressSerializer,
     CourseSerializer,
     EnrollmentCreateSerializer,
     EnrollmentSerializer,
@@ -29,6 +33,7 @@ class AlreadyEnrolled(APIException):
     partial_update=extend_schema(summary="Частичное редактирование курса", tags=["Курсы"]),
 )
 class CourseViewSet(
+    CollectionFilteringMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -38,6 +43,10 @@ class CourseViewSet(
     serializer_class = CourseSerializer
     permission_classes = (IsAuthenticated, CoursePermission)
     http_method_names = ("get", "post", "put", "patch", "head", "options")
+    filter_backends = (SearchFilter, StableOrderingFilter)
+    search_fields = ("title", "description")
+    ordering_fields = ("title", "created_at")
+    ordering = ("-created_at", "-id")
 
     def get_queryset(self):
         queryset = Course.objects.select_related("teacher")
@@ -49,6 +58,8 @@ class CourseViewSet(
         return queryset.filter(enrollments__student=user)
 
     def get_serializer_class(self):
+        if self.action == "progress":
+            return CourseProgressSerializer
         if self.action == "students":
             if self.request.method == "POST":
                 return EnrollmentCreateSerializer
@@ -63,6 +74,7 @@ class CourseViewSet(
         summary="Список студентов курса",
         tags=["Курсы"],
         responses=EnrollmentSerializer(many=True),
+        filters=False,
     )
     @extend_schema(
         methods=["POST"],
@@ -90,4 +102,18 @@ class CourseViewSet(
                 status=status.HTTP_201_CREATED,
             )
         enrollments = course.enrollments.select_related("student")
-        return Response(self.get_serializer(enrollments, many=True).data)
+        page = self.paginate_queryset(enrollments)
+        return self.get_paginated_response(self.get_serializer(page, many=True).data)
+
+    @extend_schema(
+        summary="Прогресс студентов по курсу",
+        tags=["Курсы"],
+        responses=CourseProgressSerializer(many=True),
+        filters=False,
+    )
+    @action(detail=True, methods=["get"])
+    def progress(self, request, pk=None):
+        course = self.get_object()
+        students = get_course_progress(course, request.user)
+        page = self.paginate_queryset(students)
+        return self.get_paginated_response(self.get_serializer(page, many=True).data)

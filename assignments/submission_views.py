@@ -11,12 +11,15 @@ from drf_spectacular.utils import (
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from assignments.filters import SubmissionFilter, SubmissionListQuerySerializer
 from assignments.models import Assignment, Grade, Submission
 from assignments.permissions import SubmissionPermission
 from assignments.serializers import GradeInputSerializer, SubmissionSerializer
+from config.filters import CollectionFilteringMixin, StableOrderingFilter
 from users.models import User
 
 
@@ -40,7 +43,9 @@ class SubmissionAlreadyGraded(APIException):
     ],
 )
 @extend_schema_view(
-    list=extend_schema(summary="Доступные решения задания"),
+    list=extend_schema(
+        summary="Доступные решения задания", parameters=[SubmissionListQuerySerializer]
+    ),
     retrieve=extend_schema(summary="Информация о решении"),
     create=extend_schema(
         summary="Отправка решения студентом",
@@ -65,6 +70,7 @@ class SubmissionAlreadyGraded(APIException):
     ),
 )
 class SubmissionViewSet(
+    CollectionFilteringMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -74,6 +80,10 @@ class SubmissionViewSet(
     serializer_class = SubmissionSerializer
     permission_classes = (IsAuthenticated, SubmissionPermission)
     http_method_names = ("get", "post", "put", "patch", "head", "options")
+    filter_backends = (SubmissionFilter, SearchFilter, StableOrderingFilter)
+    search_fields = ("student__username", "student__first_name", "student__last_name")
+    ordering_fields = ("submitted_at", "updated_at")
+    ordering = ("-submitted_at", "-id")
 
     def get_assignment(self):
         if not hasattr(self, "_assignment"):

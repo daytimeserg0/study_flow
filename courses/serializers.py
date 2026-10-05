@@ -54,3 +54,19 @@ class EnrollmentCreateSerializer(WritableFieldsMixin, serializers.Serializer):
                 {"username": "Активный студент с таким username не найден."}
             ) from error
         return attrs
+
+
+class CourseProgressSerializer(serializers.Serializer):
+    student = CourseUserSerializer(source="*", read_only=True)
+    assignments_count = serializers.IntegerField(read_only=True)
+    submitted_count = serializers.IntegerField(read_only=True)
+    graded_count = serializers.IntegerField(read_only=True)
+    overdue_count = serializers.IntegerField(read_only=True)
+    earned_score = serializers.IntegerField(read_only=True)
+    max_score = serializers.IntegerField(read_only=True)
+    completion_percent = serializers.SerializerMethodField()
+
+    def get_completion_percent(self, obj) -> float:
+        if not obj.assignments_count:
+            return 0.0
+        return round(100 * obj.submitted_count / obj.assignments_count, 2)

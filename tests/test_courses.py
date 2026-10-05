@@ -217,9 +217,10 @@ def test_course_list_contains_only_owned_or_enrolled_courses(
     response = api_client.get(reverse("courses:course-list"))
 
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
-    assert {item["id"] for item in response.json()} == visible_ids[actor]
-    for item in response.json():
+    assert isinstance(response.json()["results"], list)
+    assert response.json()["count"] == len(visible_ids[actor])
+    assert {item["id"] for item in response.json()["results"]} == visible_ids[actor]
+    for item in response.json()["results"]:
         assert set(item["teacher"]) == {"id", "username", "first_name", "last_name"}
 
 
@@ -231,7 +232,7 @@ def test_user_without_courses_gets_empty_list(api_client, role):
     response = api_client.get(reverse("courses:course-list"))
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
 
 
 def test_enrolled_student_can_read_course_without_private_teacher_data(
@@ -321,8 +322,9 @@ def test_teacher_roster_contains_only_students_from_requested_course(
     response = api_client.get(reverse("courses:course-students", kwargs={"pk": course.pk}))
 
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    item = response.json()[0]
+    assert response.json()["count"] == 1
+    assert len(response.json()["results"]) == 1
+    item = response.json()["results"][0]
     assert item["id"] == enrollment.pk
     assert item["course"] == course.pk
     assert item["student"] == public_user(student)
@@ -354,9 +356,9 @@ def test_teacher_enrolls_student_and_student_gains_course_access(
     assert response.json()["student"] == public_user(student)
     api_client.force_authenticate(student)
     assert api_client.get(detail_url).status_code == 200
-    assert [item["id"] for item in api_client.get(reverse("courses:course-list")).json()] == [
-        course.pk
-    ]
+    assert [
+        item["id"] for item in api_client.get(reverse("courses:course-list")).json()["results"]
+    ] == [course.pk]
 
 
 def test_duplicate_enrollment_returns_conflict_without_modifying_existing_record(
@@ -463,7 +465,7 @@ def test_course_permissions_follow_current_role_with_existing_jwt(api_client, te
     response = api_client.post(url, {"title": "Запрещённый курс"}, format="json")
 
     assert response.status_code == 403
-    assert api_client.get(url).json() == []
+    assert api_client.get(url).json() == {"count": 0, "next": None, "previous": None, "results": []}
     assert Course.objects.count() == 1
     teacher.role = User.Role.TEACHER
     teacher.save(update_fields=["role"])

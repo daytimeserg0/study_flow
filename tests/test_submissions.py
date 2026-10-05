@@ -171,7 +171,7 @@ def test_jwt_student_needs_enrollment_and_publication_before_submitting(
 
     assert response.status_code == 201
     assert Submission.objects.get().student == user
-    assert api_client.get(url).json()[0]["id"] == response.json()["id"]
+    assert api_client.get(url).json()["results"][0]["id"] == response.json()["id"]
     user.role = User.Role.TEACHER
     user.save(update_fields=["role"])
     assert api_client.get(url).status_code == 404
@@ -230,9 +230,13 @@ def test_teacher_reads_all_submissions_only_for_requested_assignment(
     response = api_client.get(submission_url(course, assignment))
 
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
-    assert {item["id"] for item in response.json()} == {submission.pk, peer_submission.pk}
-    assert {item["student"]["id"] for item in response.json()} == {student.pk, peer.pk}
+    assert isinstance(response.json()["results"], list)
+    assert response.json()["count"] == 2
+    assert {item["id"] for item in response.json()["results"]} == {
+        submission.pk,
+        peer_submission.pk,
+    }
+    assert {item["student"]["id"] for item in response.json()["results"]} == {student.pk, peer.pk}
     assert api_client.get(submission_url(course, assignment, peer_submission)).status_code == 200
 
 
@@ -246,7 +250,7 @@ def test_student_list_and_detail_do_not_expose_classmates_answers(
     api_client.force_authenticate(student)
     own_list = api_client.get(submission_url(course, assignment))
     assert own_list.status_code == 200
-    assert [item["id"] for item in own_list.json()] == [submission.pk]
+    assert [item["id"] for item in own_list.json()["results"]] == [submission.pk]
     assert api_client.get(submission_url(course, assignment, submission)).status_code == 200
 
     response = getattr(api_client, method)(
@@ -309,7 +313,7 @@ def test_draft_submission_list_is_visible_only_to_course_teacher(
     api_client.force_authenticate(teacher)
     response = api_client.get(url)
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
     api_client.force_authenticate(student)
     assert api_client.get(url).status_code == 404
     assert api_client.post(url, {"answer": "Ответ"}, format="json").status_code == 404
@@ -523,7 +527,8 @@ def test_student_and_teacher_can_read_submitted_work_after_deadline(
         assert response.status_code == 200
         assert response.json()["answer"] == "Первое решение"
         assert [
-            item["id"] for item in api_client.get(submission_url(course, assignment)).json()
+            item["id"]
+            for item in api_client.get(submission_url(course, assignment)).json()["results"]
         ] == [submission.pk]
 
 

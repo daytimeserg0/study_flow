@@ -11,12 +11,15 @@ from drf_spectacular.utils import (
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from assignments.filters import AssignmentFilter, AssignmentListQuerySerializer
 from assignments.models import Assignment
 from assignments.permissions import AssignmentPermission
 from assignments.serializers import AssignmentSerializer, PublishAssignmentSerializer
+from config.filters import CollectionFilteringMixin, StableOrderingFilter
 from courses.models import Course
 from users.models import User
 
@@ -32,7 +35,7 @@ class PublishedAssignmentDeletionError(APIException):
     parameters=[OpenApiParameter("course_pk", OpenApiTypes.INT, OpenApiParameter.PATH)],
 )
 @extend_schema_view(
-    list=extend_schema(summary="Задания курса"),
+    list=extend_schema(summary="Задания курса", parameters=[AssignmentListQuerySerializer]),
     retrieve=extend_schema(summary="Информация о задании"),
     create=extend_schema(summary="Создание черновика задания"),
     update=extend_schema(summary="Редактирование задания"),
@@ -42,10 +45,14 @@ class PublishedAssignmentDeletionError(APIException):
         responses={204: None, 409: OpenApiResponse(description="Задание уже опубликовано.")},
     ),
 )
-class AssignmentViewSet(viewsets.ModelViewSet):
+class AssignmentViewSet(CollectionFilteringMixin, viewsets.ModelViewSet):
     serializer_class = AssignmentSerializer
     permission_classes = (IsAuthenticated, AssignmentPermission)
     http_method_names = ("get", "post", "put", "patch", "delete", "head", "options")
+    filter_backends = (AssignmentFilter, SearchFilter, StableOrderingFilter)
+    search_fields = ("title", "description")
+    ordering_fields = ("title", "created_at", "due_at", "max_score")
+    ordering = ("-created_at", "-id")
 
     def get_course(self):
         if not hasattr(self, "_course"):

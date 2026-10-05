@@ -34,6 +34,11 @@ class Assignment(models.Model):
         ordering = ("-created_at", "-id")
         verbose_name = "задание"
         verbose_name_plural = "задания"
+        indexes = [
+            models.Index(
+                fields=("course", "status", "due_at"), name="assign_course_status_due_idx"
+            ),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(max_score__gte=1, max_score__lte=1000),
@@ -84,6 +89,11 @@ class Submission(models.Model):
         ordering = ("-submitted_at", "-id")
         verbose_name = "решение"
         verbose_name_plural = "решения"
+        indexes = [
+            models.Index(
+                fields=("assignment", "-submitted_at", "-id"), name="sub_assignment_time_idx"
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=("assignment", "student"), name="unique_assignment_student"
