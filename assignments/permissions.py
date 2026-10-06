@@ -4,7 +4,7 @@ from users.models import User
 
 
 class AssignmentPermission(BasePermission):
-    message = "Изменять задания может только преподаватель — владелец курса."
+    message = "Изменять задания может только преподаватель - владелец курса."
 
     def has_permission(self, request, view):
         if view.action == "create":

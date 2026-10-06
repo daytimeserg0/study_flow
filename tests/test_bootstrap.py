@@ -88,8 +88,9 @@ def test_swagger_is_public_and_uses_bundled_assets(client):
     assert reverse("schema").encode() in response.content
 
 
-def test_root_redirects_to_api_documentation(client):
+def test_root_renders_web_application(client):
     response = client.get("/")
 
-    assert response.status_code == 302
-    assert response.url == reverse("swagger-ui")
+    assert response.status_code == 200
+    assert "Location" not in response
+    assert "studyflow/index.html" in [template.name for template in response.templates]

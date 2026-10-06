@@ -1,9 +1,18 @@
+from django.conf import settings
 from django.db import OperationalError, connection
+from django.views.generic import TemplateView
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+
+class StudyFlowView(TemplateView):
+    template_name = "studyflow/index.html"
+
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs), "debug": settings.DEBUG}
 
 
 class HealthCheckSerializer(serializers.Serializer):

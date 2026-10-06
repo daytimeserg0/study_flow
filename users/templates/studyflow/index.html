@@ -1,0 +1,128 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#183e32">
+    <meta name="description" content="Учебные курсы, задания и обратная связь в одном месте.">
+    <title>StudyFlow - пространство для учёбы</title>
+    <link rel="stylesheet" href="{% static 'studyflow/app.css' %}?v=1">
+    <script type="module" src="{% static 'studyflow/app.js' %}"></script>
+  </head>
+  <body>
+    <section id="auth-screen" class="auth-screen" aria-label="Вход в StudyFlow">
+      <div class="auth-story">
+        <a class="brand" href="#courses" aria-label="StudyFlow - главная">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 28 28" fill="none"><path d="M6 7h7a4 4 0 0 1 4 4v11a5 5 0 0 0-5-3H6V7Z"/><path d="M17 10a4 4 0 0 1 4-3h2v12h-2a5 5 0 0 0-4 3"/></svg>
+          </span>
+          <span>StudyFlow<span class="brand-dot">.</span></span>
+        </a>
+        <div class="auth-story-body">
+          <p class="eyebrow">Пространство для учёбы</p>
+          <h2>От первого <br>задания - <br>к новым знаниям<span class="accent-dot">.</span></h2>
+          <p class="auth-story-description">Курсы, ваши работы и обратная связь преподавателя. Всё, что помогает двигаться дальше.</p>
+          <div class="learning-path" aria-label="Учебный процесс">
+            <div class="learning-step"><span class="learning-step-number">01</span><div><strong>Разбирайтесь в новом</strong><span>Задания с понятными условиями</span></div></div>
+            <div class="learning-step"><span class="learning-step-number">02</span><div><strong>Пробуйте на практике</strong><span>Решения в удобном вам формате</span></div></div>
+            <div class="learning-step"><span class="learning-step-number">03</span><div><strong>Замечайте свой прогресс</strong><span>Оценки и комментарии к работам</span></div></div>
+          </div>
+        </div>
+        <p class="auth-story-footer">Учиться проще, когда всё на своём месте.</p>
+      </div>
+
+      <div class="auth-content">
+        <div class="auth-card">
+          <p class="eyebrow">Добро пожаловать</p>
+          <h1 id="auth-title">С возвращением</h1>
+          <p id="auth-description" class="muted">Войдите, чтобы продолжить работу с вашими курсами.</p>
+          <form id="auth-form" class="auth-form">
+            <div class="field">
+              <label for="auth-username">Логин</label>
+              <input id="auth-username" name="username" type="text" required autocomplete="username" maxlength="150" placeholder="Ваш логин" autocapitalize="none" spellcheck="false">
+            </div>
+            <div class="registration-field field" hidden>
+              <label for="auth-email">Электронная почта</label>
+              <input id="auth-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com">
+            </div>
+            <div class="registration-field field" hidden>
+              <label for="auth-first-name">Имя <span class="optional">необязательно</span></label>
+              <input id="auth-first-name" name="first_name" type="text" autocomplete="given-name" maxlength="150" placeholder="Как вас зовут">
+            </div>
+            <div class="registration-field field" hidden>
+              <label for="auth-last-name">Фамилия <span class="optional">необязательно</span></label>
+              <input id="auth-last-name" name="last_name" type="text" autocomplete="family-name" maxlength="150" placeholder="Ваша фамилия">
+            </div>
+            <div class="field">
+              <label for="auth-password">Пароль</label>
+              <input id="auth-password" name="password" type="password" required autocomplete="current-password" placeholder="Ваш пароль">
+            </div>
+            <p id="auth-error" class="form-error" role="alert" hidden></p>
+            <button id="auth-submit" class="button primary auth-submit" type="submit">Войти</button>
+            <button id="auth-switch" class="auth-switch" type="button">Нет аккаунта? Зарегистрироваться</button>
+          </form>
+
+          {% if debug %}
+          <div class="demo-access">
+            <h2>Посмотреть на примере</h2>
+            <p>Готовый курс с заданиями и работами студентов.</p>
+            <div class="demo-actions">
+              <button class="button secondary small" type="button" data-demo="student">Войти студентом</button>
+              <button class="button secondary small" type="button" data-demo="teacher">Войти преподавателем</button>
+            </div>
+            <details class="demo-credentials">
+              <summary>Данные учебных аккаунтов</summary>
+              <p>Студент: <code>demo_student</code><br>Преподаватель: <code>demo_teacher</code><br>Пароль: <code>StudyFlow-demo-2026!</code></p>
+            </details>
+          </div>
+          {% endif %}
+        </div>
+        <p class="auth-content-footer">Ваш следующий шаг начинается здесь.</p>
+      </div>
+    </section>
+
+    <div id="app-shell" class="app-shell" hidden>
+      <aside class="sidebar">
+        <a class="brand" href="#courses" aria-label="StudyFlow - мои курсы">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 28 28" fill="none"><path d="M6 7h7a4 4 0 0 1 4 4v11a5 5 0 0 0-5-3H6V7Z"/><path d="M17 10a4 4 0 0 1 4-3h2v12h-2a5 5 0 0 0-4 3"/></svg>
+          </span>
+          <span>StudyFlow<span class="brand-dot">.</span></span>
+        </a>
+        <div class="sidebar-heading">Ваше пространство</div>
+        <nav class="sidebar-nav" aria-label="Основная навигация">
+          <a class="nav-link" href="#courses"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9h17M9 9v11"/></svg><span>Мои курсы</span></a>
+          <a class="nav-link" href="#account"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-1a7 7 0 0 1 14 0v1"/></svg><span>Мой профиль</span></a>
+        </nav>
+        <div class="sidebar-note"><span class="sidebar-note-line" aria-hidden="true"></span><p>Небольшие шаги.<br>Заметный прогресс.</p></div>
+        <footer class="sidebar-footer">
+          <div id="sidebar-user"></div>
+          <button id="logout" class="logout-button" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5H5v14h5M9 12h11m-4-4 4 4-4 4"/></svg><span>Выйти</span></button>
+        </footer>
+      </aside>
+      <main class="main" id="main-content">
+        <div id="page"></div>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <dialog id="modal" aria-labelledby="modal-title">
+      <form id="modal-form">
+        <header id="modal-header" class="modal-header">
+          <h2 id="modal-title"></h2>
+          <button id="modal-close" class="icon-button" type="button" aria-label="Закрыть окно"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </header>
+        <div id="modal-body" class="modal-body"></div>
+        <p id="modal-error" class="form-error modal-error" role="alert" hidden></p>
+        <footer class="modal-footer">
+          <button id="modal-cancel" class="button secondary" type="button">Отмена</button>
+          <button id="modal-submit" class="button primary" type="submit">Сохранить</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <noscript><div class="noscript-notice">Для работы StudyFlow включите JavaScript в настройках браузера и обновите страницу.</div></noscript>
+  </body>
+</html>

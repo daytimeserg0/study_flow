@@ -1,12 +1,11 @@
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from config.views import HealthCheckView
+from config.views import HealthCheckView, StudyFlowView
 
 urlpatterns = [
-    path("", RedirectView.as_view(pattern_name="swagger-ui", permanent=False)),
+    path("", StudyFlowView.as_view(), name="web-app"),
     path("admin/", admin.site.urls),
     path("api/", include("users.urls")),
     path("api/", include("courses.urls")),

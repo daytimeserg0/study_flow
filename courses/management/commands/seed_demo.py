@@ -113,7 +113,7 @@ class Command(BaseCommand):
                 python,
                 "Подсчёт слов",
                 "Подсчитайте частоту слов в тексте без учёта регистра. "
-                "Результат представьте словарём: слово — количество вхождений.",
+                "Результат представьте словарём: слово - количество вхождений.",
                 100,
                 14,
                 Assignment.Status.PUBLISHED,
@@ -185,7 +185,7 @@ class Command(BaseCommand):
                 "student_words",
                 assignments["words"],
                 "demo_student",
-                'from collections import Counter\n\ntext = "Python — это просто. Python!"\n'
+                'from collections import Counter\n\ntext = "Python - это просто. Python!"\n'
                 "counts = dict(Counter(text.lower().split()))\nprint(counts)",
                 80,
                 "Верный выбор Counter. Добавьте удаление знаков препинания перед подсчётом.",

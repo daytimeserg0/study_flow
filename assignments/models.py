@@ -104,7 +104,7 @@ class Submission(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.student} — {self.assignment}"
+        return f"{self.student} - {self.assignment}"
 
     @property
     def status(self):
@@ -140,4 +140,4 @@ class Grade(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.submission} — {self.score}"
+        return f"{self.submission} - {self.score}"

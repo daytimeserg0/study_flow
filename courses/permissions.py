@@ -4,7 +4,7 @@ from users.models import User
 
 
 class CoursePermission(BasePermission):
-    message = "Это действие доступно только преподавателю — владельцу курса."
+    message = "Это действие доступно только преподавателю - владельцу курса."
 
     def has_permission(self, request, view):
         return view.action != "create" or request.user.role == User.Role.TEACHER
