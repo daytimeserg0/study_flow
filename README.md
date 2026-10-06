@@ -10,6 +10,7 @@
 Преподаватели проверяют работы, выставляют оценки и оставляют обратную связь.
 Доступны прогресс по курсам, поиск, фильтры и постраничные списки.
 Подключены PostgreSQL, Django Admin, Swagger и тестовое окружение.
+GitHub Actions проверяет код, тесты, покрытие и сборку Docker-образа.
 
 ## Стек
 
@@ -17,8 +18,9 @@
 - PostgreSQL 18, psycopg 3.
 - Simple JWT: access-токены на 15 минут, refresh-токены на 24 часа.
 - drf-spectacular и локальные ресурсы Swagger UI.
-- pytest, pytest-django, Ruff.
+- pytest, pytest-django, pytest-cov, Ruff.
 - Docker Compose.
+- GitHub Actions.
 
 Версии зависимостей зафиксированы в `requirements.txt` и `requirements-dev.txt`.
 Файлы `.in` содержат исходные ограничения версий.
@@ -412,6 +414,56 @@ docker compose exec web python manage.py spectacular --validate --fail-on-warn -
 и приватность. Тесты числа SQL-запросов проверяют отсутствие N+1 при росте группы
 и количества решений.
 
+## CI
+
+Workflow `.github/workflows/ci.yml` запускается при push в `main`, открытии
+pull request в `main`, новых коммитах в таком PR и его повторном открытии.
+Также доступен ручной запуск через **Actions → CI → Run workflow**.
+Обычный push в рабочую ветку без PR не запускает проверки.
+
+Три job выполняются независимо на Ubuntu 24.04:
+
+| Job | Проверки |
+| --- | --- |
+| `Lint` | Ruff: ошибки, импорты и форматирование |
+| `Tests` | Python 3.13, PostgreSQL 18, совместимость зависимостей, проверки Django, отсутствие пропущенных миграций, применение миграций с нуля, валидация OpenAPI, сбор статики и pytest с покрытием |
+| `Docker image` | Сборка образа из Dockerfile; контейнер приложения в этом job не запускается |
+
+Зависимости устанавливаются из зафиксированного `requirements-dev.txt`, загрузки
+pip кешируются. Новые запуски отменяют предыдущий незавершённый запуск для той же
+ветки или PR. Actions закреплены полными SHA коммитов. Workflow имеет только
+`contents: read` и не публикует образ в registry.
+
+Тестовая БД создаётся отдельно на каждом runner. Workflow содержит временные
+значения настроек, поэтому секреты репозитория и локальный `.env` для CI не нужны.
+Сервис PostgreSQL должен пройти healthcheck до начала шагов тестирования.
+
+Покрытие измеряется для `config`, `users`, `courses` и `assignments`, включая ветви
+условий. Миграции и стандартные точки входа ASGI/WSGI исключены. Общий результат
+ниже **90%** завершает job `Tests` с ошибкой. Это единый показатель строк и ветвей,
+а не отдельное требование 90% для каждого файла или только для ветвей.
+
+Артефакт `test-reports` хранится 7 дней и содержит созданные за запуск отчёты:
+
+- `junit.xml` — результаты тестов;
+- `coverage.xml` — покрытие в машиночитаемом формате;
+- `htmlcov/index.html` — интерактивный отчёт покрытия;
+- `openapi.yaml` — проверенная схема API.
+
+Доступные отчёты загружаются и при неудачных проверках. Если установка зависимостей
+или другой ранний шаг завершится ошибкой, часть отчётов может отсутствовать.
+Первый запуск на GitHub произойдёт после отправки workflow в репозиторий.
+
+Локальный запуск тех же тестов с отчётами из PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -q --cov --cov-config=pyproject.toml --cov-report=term-missing --cov-report=xml:artifacts/coverage.xml --cov-report=html:artifacts/htmlcov --junitxml=artifacts/junit.xml
+```
+
+Папка `artifacts/`, данные coverage и собранная статика исключены из Git и
+контекста Docker-сборки. Обычный `pytest -q` остаётся доступен без измерения покрытия.
+
 ## Структура
 
 ```text
@@ -420,6 +472,7 @@ users/           пользователи, роли, регистрация, JWT
 courses/         курсы, зачисления, прогресс, права доступа и админка
 assignments/     задания, решения студентов, сроки сдачи и оценивание
 tests/           проверки конфигурации и доступных endpoint
+.github/         CI в GitHub Actions
 compose.yaml     сервисы приложения и PostgreSQL
 ```
 

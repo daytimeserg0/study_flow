@@ -12,6 +12,7 @@ __pycache__
 .coverage.*
 htmlcov
 coverage.xml
+artifacts
 .idea
 .vscode
 staticfiles

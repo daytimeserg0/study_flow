@@ -4,6 +4,17 @@ python_files = ["test_*.py"]
 testpaths = ["tests"]
 addopts = "--strict-config --strict-markers"
 
+[tool.coverage.run]
+branch = true
+source = ["config", "users", "courses", "assignments"]
+omit = ["*/migrations/*", "config/asgi.py", "config/wsgi.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+precision = 2
+
 [tool.ruff]
 target-version = "py313"
 line-length = 100
